@@ -1,0 +1,25 @@
+Install steps for gomez handler:
+
+Requirements: Ubuntu OS
+		    Python (following packages used: os, sys, ConfigParser, re, smtpd, asyncore, xml.dom.minidom, logging, logging.handlers)
+		    
+Port used:	SMTP (25)
+
+
+Install:
+1. Create /etc/gomez_alerts  ( $: sudo mkdir /etc/gomez_alerts )
+
+2. Copy the dynect.cfg to that directory ( $: sudo cp dynect.cfg /etc/gomez_alerts/dynect.cfg )
+
+3. Edit and save the dynect.cfg to add your dynect customer name, user name and password ( $: sudo vi dynect.cfg /etc/gomez_alerts/dynect.cfg )
+
+4. Start the script from whereever you wish to store it, alertSmtp.py and dynect.py must be in the same directory ( $ sudo python alertSmtp.py )
+
+
+
+Notes:
+- Using the smtp server object out of python queues incoming requests so none should be lost
+- Hosts are configure to accept from 0.0.0.0/0 - this can be changed if we get the single ip address of the sending server (keep in mind that if we give an ip or a host name resolved to an 
+									ip it will only accept from that ip which may be bad since they are sure to have a large number of servers doing the monitoring)
+- This will run in the background and only reads the config on startup. Changes made require to stop and start the service which currently is a "ps -ef" to find the pid then "sudo kill -9 <pid>"
+- Logging is controlled from within the dynect.cfg options.
