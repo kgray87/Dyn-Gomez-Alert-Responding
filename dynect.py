@@ -16,7 +16,7 @@ class Dynect:
 	_token = ""
 	_loginJson = ""
 	_logging = None
-	_std_out = 0
+	_std_out = 2 
 	
 	"""
 	Constructor
@@ -34,7 +34,7 @@ class Dynect:
 		self._log_debug("Dynect:__del__: Enter")
 		self._destroy_session()
 		self._loginJson = ""
-	
+
 	"""
 	create_session - Does the login to create the token
 	
@@ -56,11 +56,13 @@ class Dynect:
 			result = self._do_rest_call('/REST/Session/', 'POST', self._loginJson)
 			if result["status"] == "success":
 				self._token = result["data"]["token"]
+				self._log_debug("Dynect:_create_session: Success")
 				return True
 			else:
+				self._log_error("Dynect:_create_session: Failed")
 				return False
 		except:
-			self.log_error("Dynect:_create_session: Error! - " + self._format_excpt_info())
+			self._log_error("Dynect:_create_session: Error! - " + self._format_excpt_info())
 			return False
 
 
@@ -171,8 +173,8 @@ class Dynect:
 				result = self._do_rest_call(record, 'GET', '')
 				self._log_debug("Dynect:get_a_record_for_fqdn: returned record")
 				if result["data"]["rdata"]["address"] == ip_address:
-					self._log_debug("Dynect:get_a_record_for_fqdn: Exit - found ip, record is " + result["data"]["record_id"])
-					return result["data"]["record_id"]
+					self._log_debug("Dynect:get_a_record_for_fqdn: Exit - found ip, record")
+					return str(result["data"]["record_id"])
 			self._log_warning("Dynect:get_a_record_for_fqdn: No record matched " + ip_address + " at " + fqdn)
 			self._log_debug("Dynect:get_a_record_for_fqdn: Exit - return empty")
 			return ""
@@ -254,10 +256,6 @@ class Dynect:
 			else:
 				response, content = http.request(BASE_URL + apiname, verb, inputJson, headers={'Content-type': 'application/json', 'Auth-Token':  self._token})
 			result = json.loads(content)
-			if result["status"] == "success":
-				self._log_debug("Dynect:_do_rest_call: result is " + result)
-			else:
-				self._log_warning("Dynect:_do_rest_call: bad response - " + result)
 			self._log_debug("Dynect:_do_rest_call: Exit")
 			return result
 		except:
@@ -277,7 +275,7 @@ class Dynect:
 		except KeyError:
 			excArgs = "<no args>"
 		excTb = traceback.format_tb(trbk, maxTBlevel)
-		return excName + excArgs + excTb
+		return excName # + excArgs + excTb
 	
 	'''
 	Set of functions to handle logging, by passing in the logging object we can let the calling program decide

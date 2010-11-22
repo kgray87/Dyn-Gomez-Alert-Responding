@@ -79,7 +79,6 @@ class AlertResponderSMTPServer(smtpd.SMTPServer):
 		
 		self.logger.info("Alert responding smtp sever running on port 25")
 		
-		# This accepts emails from all servers.... you can narrow this down for security
 		smtpd.SMTPServer.__init__(self, ('0.0.0.0', 25), None)
 
 	def process_message(self, peer, mailfrom, rcpttos, data):
@@ -87,10 +86,8 @@ class AlertResponderSMTPServer(smtpd.SMTPServer):
 		self.logger.debug("email from peer: (" + str(peer[0]) + "," + str(peer[1]) + ")")
 		self.logger.debug("email from: " +  mailfrom)
 
-                reg = re.compile("alert@.*")
-
-		# This "True" statement should be replaced with whatever you want to use to test that the email is coming from the source you want, perhaps the mailfrom or rcpttos (to) or the peer that sent it or a supplied key value pair to test
-                if  True: 
+		# Do your authentication of email test here
+                if  True:
                         self.logger.info("Received email from gomez alerting")
                         xmlOut = re.findall('<GPN_MESSAGE.*</GPN_MESSAGE>',  data)
 
@@ -115,7 +112,7 @@ class AlertResponderSMTPServer(smtpd.SMTPServer):
 				
 				# connect to dynect
 				dyn = Dynect(self.cn, self.un, self.pwd)
-				
+				dyn.use_logger(self.logger, 5)	
 				self.logger.info("Successfully connected!")
 				
 				# now pull out all the sites from the xml that we need to switch
@@ -166,5 +163,4 @@ if __name__ == "__main__":
                 exit(1)
 
         main()
-
 
