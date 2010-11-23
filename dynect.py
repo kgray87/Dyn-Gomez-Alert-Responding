@@ -130,7 +130,8 @@ class Dynect:
 			self._log_debug("Dynect:delete_a_record: Enter")
 			self._log_debug("Dynect:delete_a_record: deleteing - zone:" + zone + ", fqdn:" + fqdn + ", ip:" + ip_address)
 			#first we need to get the a record
-			outId = self.get_a_record_for_fqdn(zone, fqdn, ip_address)
+			#outId = self.get_a_record_for_fqdn(zone, fqdn, ip_address)
+			outId, out_fqdn =  self.search_for_a_record_in_zone(zone, fqdn, ip_address)
 			
 			if outId == "":				
 				self._log_warning("Dynect:delete_a_record: Unable to find A record to delete")
@@ -138,7 +139,7 @@ class Dynect:
 				return False
 				
 			# now make the call to our rest helper function to delete
-			result = self._do_rest_call('/REST/ARecord/' + zone + '/' + fqdn +  '/' + outId + '/', 'DELETE', '')
+			result = self._do_rest_call('/REST/ARecord/' + zone + '/' + out_fqdn +  '/' + outId + '/', 'DELETE', '')
 			if result["status"] == "success":
 				# if we succeeded attempt to publish this zone
 				publish_result = self.publish_zone(zone)
@@ -207,6 +208,52 @@ class Dynect:
 		except:
 			self._log_error("Dynect:get_a_records_for_fqdn: Error! - " + self._format_excpt_info())
 			return ""
+
+	"""
+	search_for_a_record_in_zone - Finds an a record in the fqdn or any fqdn's beneatht the provided one. If passed "" the whole zone will be searched
+	
+	zone, ip_address of record
+	
+	returns: record id
+	"""
+	def search_for_a_record_in_zone(self, zone, fqdn, ip_address):
+		try:
+			self._log_debug("Dynect:search_for_a_record_in_zone: Enter")
+			self._log_debug("Dynect:search_for_a_record_in_zone: zone - " + zone + "    fqdn - " + fqdn)
+			
+			if fqdn == "":
+				# now make the call to our rest helper function to  get the NodeList
+				result = self._do_rest_call('/REST/NodeList/' + zone + '/', 'GET', '')
+				print result
+				if result["status"] == "success":
+					for fqdns in result["data"]:
+						recordId = self.get_a_record_for_fqdn(zone, fqdns, ip_address)
+						if recordId != "":
+							self._log_debug("Dynect:search_for_a_record_in_zone: found record! Id is: " + recordId)
+							return recordId, fqdns
+				else:
+					self._log_warning("Dynect:search_for_a_record_in_zone: Failed to get record, may not be any")
+					self._log_debug("Dynect:search_for_a_record_in_zone: Exit - return empty")
+					return "", ""
+				return "", ""
+			else:
+				# now make the call to our rest helper function to  get the NodeList
+				result = self._do_rest_call('/REST/NodeList/' + zone + '/' + fqdn + '/', 'GET', '')
+				print result
+				if result["status"] == "success":
+					for fqdns in result["data"]:
+						recordId = self.get_a_record_for_fqdn(zone, fqdns, ip_address)
+						if recordId != "":
+							self._log_debug("Dynect:search_for_a_record_in_zone: found record! Id is: " + recordId)
+							return recordId, fqdns
+				else:
+					self._log_warning("Dynect:search_for_a_record_in_zone: Failed to get record, may not be any")
+					self._log_debug("Dynect:search_for_a_record_in_zone: Exit - return empty")
+					return "", ""
+				return "", ""
+		except:
+			self._log_error("Dynect:get_a_records_for_fqdn: Error! - " + self._format_excpt_info())
+			return "", ""
 
 
 	"""
@@ -344,4 +391,3 @@ class Dynect:
 			self._logging.critical(msg)
 		except:
 			pass
-

@@ -79,7 +79,7 @@ class AlertResponderSMTPServer(smtpd.SMTPServer):
 		
 		self.logger.info("Alert responding smtp sever running on port 25")
 		
-		smtpd.SMTPServer.__init__(self, ('0.0.0.0', 25), None)
+		smtpd.SMTPServer.__init__(self, (self.host, 25), None)
 
 	def process_message(self, peer, mailfrom, rcpttos, data):
 		self.logger.debug("Entering process_message")

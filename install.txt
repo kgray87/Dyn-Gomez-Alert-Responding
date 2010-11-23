@@ -1,3 +1,11 @@
+Basic Functionality:
+
+Script will run in the background waiting for an SMTP connection (email) to be recieved. Upon receipt it will check if the email is from an address it trusts then if
+it is it will attempt to take action on it. In this case it will parse the xml returned from gomez and loop through any sites which have reported errors with a severity
+level as bad as or worse than the action_level specified in the config file. For each site found it will go to the supllied fqdn and zone and attempt to remove the
+record from this zone so that customers will not be able to get the the zone.
+
+
 Install steps for gomez handler:
 
 Requirements: Ubuntu OS
@@ -14,6 +22,29 @@ Install:
 3. Edit and save the dynect.cfg to add your dynect customer name, user name and password ( $: sudo vi dynect.cfg /etc/gomez_alerts/dynect.cfg )
 
 4. Start the script from whereever you wish to store it, alertSmtp.py and dynect.py must be in the same directory ( $ sudo python alertSmtp.py )
+
+
+
+Explination of .cfg file options:
+
+[credentials]
+cn : <customer name> // the dynect customer name
+un : <username> // the dynect user name
+pwd : <password> // the dynect password
+
+[settings]
+ttl : 30 // ttl setting for zone entries
+zone: <zone> // zone being monitored
+fqdn: <fqdn> // base fqdn being monitored (will check sub zones of fqdn for addresses to remove) or blank value to look through whole zone
+host : 0.0.0.0 // host name of addresses to allow mail from (0.0.0.0 is all addresses)
+action_level: SEVERE // Lowest level to do a removal for (WARNING and SEVERE are the two allowed values)
+
+[logging]
+log_level: INFO // logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL are the levels from most logging to least)
+log_file: /etc/gomez_alerts/gomezAlert.log // log to write to
+log_byte_size: 20000 // max size in bytes for the main log before wbacking up and starting fresh (up to 5 logs will be stored)
+
+
 
 
 
