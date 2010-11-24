@@ -131,7 +131,7 @@ class Dynect:
 			self._log_debug("Dynect:delete_a_record: deleteing - zone:" + zone + ", fqdn:" + fqdn + ", ip:" + ip_address)
 			#first we need to get the a record
 			#outId = self.get_a_record_for_fqdn(zone, fqdn, ip_address)
-			outId, out_fqdn =  self.search_for_a_record_in_zone(zone, fqdn, ip_address)
+			outId, out_fqdn = self.search_for_a_record_in_zone(zone, fqdn, ip_address)
 			
 			if outId == "":				
 				self._log_warning("Dynect:delete_a_record: Unable to find A record to delete")
@@ -157,6 +157,7 @@ class Dynect:
 				return False
 		except:
 			self._log_error("Dynect:delete_a_record: Error! - " + self._format_excpt_info())
+			raise
 			return False
 	
 	"""
@@ -391,3 +392,4 @@ class Dynect:
 			self._logging.critical(msg)
 		except:
 			pass
+

@@ -12,7 +12,7 @@ import asyncore
 import xml.dom.minidom
 import logging
 import logging.handlers
-
+import socket
 
 config = ConfigParser.ConfigParser()
 
@@ -31,6 +31,7 @@ class AlertResponderSMTPServer(smtpd.SMTPServer):
 	log_file = ""
 	log_byte_size = 0
 	logger = None
+	failover_address = ""
 	# logging.DEBUG, logging.INFO, logging.WARNING, logging.ERROR, logging.CRITICAL
 	log_level = logging.INFO
 	def __init__(self):
@@ -40,16 +41,11 @@ class AlertResponderSMTPServer(smtpd.SMTPServer):
 		self.un = config.get('credentials', 'un')
 		self.pwd = config.get('credentials', 'pwd')
 		
-		self.ttl = config.get('settings', 'ttl')
-		self.zone = config.get('settings', 'zone')
-		self.fqdn = config.get('settings', 'fqdn')
-		temp_host = config.get('settings', 'host')
-		reg = re.compile("\\b(?:\\d{1,3}\\.){3}\\d{1,3}\\b")
-		if reg.match(temp_host):
-			self.host = temp_host
-		else:
-			self.host = socket.gethostbyaddr(temp_host)
-		self.action_level = config.get('settings', 'action_level')
+		self.ttl = config.get('dns_settings', 'ttl')
+		self.zone = config.get('dns_settings', 'zone')
+		self.fqdn = config.get('dns_settings', 'fqdn')
+		self.host = config.get('smtp_settings', 'host')
+		self.action_level = config.get('gomez_alert_settings', 'action_level')
 		
 		self.log_file = config.get('logging', 'log_file')
 		string_size = config.get('logging', 'log_byte_size')
@@ -86,43 +82,48 @@ class AlertResponderSMTPServer(smtpd.SMTPServer):
 		self.logger.debug("email from peer: (" + str(peer[0]) + "," + str(peer[1]) + ")")
 		self.logger.debug("email from: " +  mailfrom)
 
+		config.readfp(open('/etc/gomez_alerts/dynect.cfg'))
+                self.failover_address = config.get('dns_settings', 'failover_address')
+		
 		# Do your authentication of email test here
                 if  True:
-                        self.logger.info("Received email from gomez alerting")
-                        xmlOut = re.findall('<GPN_MESSAGE.*</GPN_MESSAGE>',  data)
-
-                        self.logger.debug("Xml received is" + xmlOut[0])
-
-                        # first get the xml into dom format to deal with from string
-                        dom = xml.dom.minidom.parseString(xmlOut[0])
-                        # lets grab the alert out 
-                        alert = dom.getElementsByTagName("alert")
-                        #now lets get the id and status
-                        idXml = alert[0].getElementsByTagName("alertId")[0]
-                        alertId = self.getTextFromXml(idXml.childNodes)
-                        statusXml = alert[0].getElementsByTagName("status")[0]
-                        status = self.getTextFromXml(statusXml.childNodes)
-
-			self.logger.debug("alert id is" + alertId)
-			self.logger.debug("status is" + status)
-
-			#make sure we are looking at the status level that we care about
-			if status == self.action_level or status == "SEVERE":
-				self.logger.info("Alert Found, Connecting to Dynect to remove IP from records")
+			original_ip = ""
+			try:
+				original_ip = socket.gethostbyname(self.fqdn)
+			except:
+				self.logger.warning("Could not get ip for " + self.fqdn)
+				return
+                        if original_ip  != self.failover_address:
+				self.logger.info("Received email from gomez alerting")
+        	                xmlOut = re.findall('<GPN_MESSAGE.*</GPN_MESSAGE>',  data)
+	
+        	                self.logger.debug("Xml received is" + xmlOut[0])
+	
+        	                # first get the xml into dom format to deal with from string
+                	        dom = xml.dom.minidom.parseString(xmlOut[0])
+                       	 	# lets grab the alert out 
+	                        alert = dom.getElementsByTagName("alert")
+        	                #now lets get the id and status
+                	        idXml = alert[0].getElementsByTagName("alertId")[0]
+                        	alertId = self.getTextFromXml(idXml.childNodes)
+	                        statusXml = alert[0].getElementsByTagName("status")[0]
+        	                status = self.getTextFromXml(statusXml.childNodes)
 				
-				# connect to dynect
-				dyn = Dynect(self.cn, self.un, self.pwd)
-				dyn.use_logger(self.logger, 5)	
-				self.logger.info("Successfully connected!")
+				self.logger.debug("alert id is" + alertId)
+				self.logger.debug("status is" + status)
+	
+				#make sure we are looking at the status level that we care about
+				if status == self.action_level or status == "SEVERE":
+					self.logger.info("Alert Found, Connecting to Dynect to remove IP from records")
 				
-				# now pull out all the sites from the xml that we need to switch
-				sites = dom.getElementsByTagName("site")
-				for site in sites:
-					ipXml = site.getElementsByTagName("siteIP")[0]
-					ip = self.getTextFromXml(ipXml.childNodes)
-					nameXml = site.getElementsByTagName("siteName")[0]
-					name = self.getTextFromXml(nameXml.childNodes)
-					dyn.delete_a_record(self.zone, self.fqdn, ip)
+					# connect to dynect
+					dyn = Dynect(self.cn, self.un, self.pwd)
+					dyn.use_logger(self.logger, 5)	
+					self.logger.info("Successfully connected!")
+					dyn.add_a_record(self.zone, self.fqdn, self.failover_address, self.ttl)
+					# now pull out all the sites from the xml that we need to switch
+					sites = dom.getElementsByTagName("site")
+					dyn.delete_a_record(self.zone, self.fqdn, original_ip)
 		else:
 			self.logger.info("Received mail from " + mailfrom + "... ignoring")
 			
@@ -163,4 +164,3 @@ if __name__ == "__main__":
                 exit(1)
 
         main()
-

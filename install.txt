@@ -1,9 +1,9 @@
 Basic Functionality:
 
 Script will run in the background waiting for an SMTP connection (email) to be recieved. Upon receipt it will check if the email is from an address it trusts then if
-it is it will attempt to take action on it. In this case it will parse the xml returned from gomez and loop through any sites which have reported errors with a severity
-level as bad as or worse than the action_level specified in the config file. For each site found it will go to the supllied fqdn and zone and attempt to remove the
-record from this zone so that customers will not be able to get the the zone.
+it is it will attempt to take action on it. In this case it will parse the xml returned from gomez to see if the severity
+level is as bad as or worse than the action_level specified in the config file. If the severity matches the ip of the fqdn will 
+be removed the from the dns records and the failover_address will be inserted in it's place. If the current and failover ips are the same the script will do nothing
 
 
 Install steps for gomez handler:
@@ -27,16 +27,22 @@ Install:
 
 Explination of .cfg file options:
 
+
 [credentials]
 cn : <customer name> // the dynect customer name
 un : <username> // the dynect user name
 pwd : <password> // the dynect password
 
-[settings]
+[dns_settings]
 ttl : 30 // ttl setting for zone entries
 zone: <zone> // zone being monitored
-fqdn: <fqdn> // base fqdn being monitored (will check sub zones of fqdn for addresses to remove) or blank value to look through whole zone
+fqdn: <fqdn> // fqdn being monitored
+failover_address:<ip_address> // ip address to replace a failed server with
+
+[smtp_settings]
 host : 0.0.0.0 // host name of addresses to allow mail from (0.0.0.0 is all addresses)
+
+[gomez_alert_settings]
 action_level: SEVERE // Lowest level to do a removal for (WARNING and SEVERE are the two allowed values)
 
 [logging]
@@ -46,11 +52,10 @@ log_byte_size: 20000 // max size in bytes for the main log before wbacking up an
 
 
 
-
-
 Notes:
 - Using the smtp server object out of python queues incoming requests so none should be lost
 - Hosts are configure to accept from 0.0.0.0/0 - this can be changed if we get the single ip address of the sending server (keep in mind that if we give an ip or a host name resolved to an 
 									ip it will only accept from that ip which may be bad since they are sure to have a large number of servers doing the monitoring)
-- This will run in the background and only reads the config on startup. Changes made require to stop and start the service which currently is a "ps -ef" to find the pid then "sudo kill -9 <pid>"
+- This will run in the background and only reads the full config on startup however it will read and updated failover_address directly prior to checking if it should replace
+					. Changes made require to stop and start the service which currently is a "ps -ef" to find the pid then "sudo kill -9 <pid>"
 - Logging is controlled from within the dynect.cfg options.
